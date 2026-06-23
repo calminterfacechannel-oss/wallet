@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Phantom Wallet</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --card2: #0f3460;
+  --purple: #ab9ff2;
+  --purple-dark: #7c5cbf;
+  --green: #50d890;
+  --red: #f56565;
+  --text: #ffffff;
+  --muted: #8a8f98;
+  --border: rgba(255,255,255,0.07);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; background:#0d0d1a; font-family:'Inter',sans-serif; overflow:hidden; }
+
+/* PHONE SHELL */
+#phone {
+  width: 390px; height: 844px;
+  background: var(--bg);
+  border-radius: 50px;
+  margin: 20px auto;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 0 2px #2a2a4a, 0 30px 80px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* STATUS BAR */
+#statusbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px 0;
+  font-size: 12px; font-weight: 600; color: #fff;
+  position: relative; z-index: 10;
+}
+.status-time { font-size: 15px; font-weight: 700; }
+.status-icons { display:flex; gap:5px; align-items:center; }
+.status-icons svg { width:16px; height:16px; fill:#fff; }
+
+/* PULL TO REFRESH */
+#ptr-container {
+  height: calc(844px - 44px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+#ptr-container::-webkit-scrollbar { display:none; }
+
+#ptr-indicator {
+  display: flex; align-items: center; justify-content: center;
+  height: 60px; margin-top: -60px;
+  font-size: 12px; color: var(--muted);
+  gap: 8px; transition: all .3s;
+}
+#ptr-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(171,159,242,.3);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin .7s linear infinite !important; }
+
+#scroll-content { padding-bottom: 100px; }
+
+/* TOP NAV */
+#topnav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px 8px;
+}
+.wallet-selector {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.07); border-radius: 20px;
+  padding: 6px 12px; cursor: pointer;
+}
+.wallet-avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #ab9ff2, #7c5cbf);
+}
+.wallet-name { font-size: 13px; font-weight: 600; color: #fff; }
+.wallet-chevron { color: var(--muted); font-size: 10px; }
+.nav-icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none;
+}
+
+/* BALANCE SECTION */
+#balance-section {
+  padding: 8px 20px 20px;
+  text-align: center;
+}
+.balance-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+#total-balance {
+  font-size: 42px; font-weight: 800; color: #fff;
+  letter-spacing: -1px; line-height: 1.1;
+  transition: all .4s cubic-bezier(.34,1.56,.64,1);
+}
+#balance-change {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 500; color: var(--green);
+  margin-top: 4px; padding: 3px 10px;
+  background: rgba(80,216,144,.1); border-radius: 20px;
+}
+
+/* ACTION BUTTONS */
+#actions {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 8px; padding: 0 20px 20px;
+}
+.action-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer;
+}
+.action-icon {
+  width: 52px; height: 52px; border-radius: 16px;
+  background: rgba(171,159,242,.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border: 1px solid rgba(171,159,242,.2);
+  transition: all .15s;
+}
+.action-icon:active { transform: scale(.92); background: rgba(171,159,242,.2); }
+.action-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+/* SECTION HEADER */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 10px;
+}
+.section-title { font-size: 14px; font-weight: 700; color: #fff; }
+.section-link { font-size: 12px; color: var(--purple); }
+
+/* TOKEN LIST */
+#token-list { padding: 0 12px; }
+.token-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 10px; border-radius: 16px;
+  cursor: pointer; transition: background .15s;
+  margin-bottom: 2px;
+}
+.token-item:active { background: rgba(255,255,255,.05); }
+.token-logo {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0; position: relative;
+}
+.token-logo .chain-badge {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #1a1a2e; border: 1.5px solid #1a1a2e;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+}
+.token-info { flex: 1; min-width: 0; }
+.token-name { font-size: 14px; font-weight: 600; color: #fff; }
+.token-amount { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.token-value { text-align: right; }
+.token-usd { font-size: 14px; font-weight: 600; color: #fff; }
+.token-change { font-size: 12px; margin-top: 1px; font-weight: 500; }
+.up { color: var(--green); }
+.dn { color: var(--red); }
+
+/* NFT SECTION */
+#nft-section { padding: 12px 12px 0; }
+.nft-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.nft-scroll::-webkit-scrollbar { display: none; }
+.nft-card {
+  flex-shrink: 0; width: 100px; border-radius: 14px;
+  overflow: hidden; background: var(--card);
+  border: 1px solid var(--border);
+}
+.nft-img {
+  width: 100px; height: 100px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+}
+.nft-info { padding: 6px 8px; }
+.nft-name { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nft-floor { font-size: 10px; color: var(--muted); }
+
+/* BOTTOM NAV */
+#bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: rgba(22,21,46,.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-around;
+  padding-top: 12px;
+  z-index: 100;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; flex: 1;
+}
+.nav-item svg { width: 22px; height: 22px; }
+.nav-item span { font-size: 10px; font-weight: 500; }
+.nav-item.active svg { fill: var(--purple); }
+.nav-item.active span { color: var(--purple); }
+.nav-item:not(.active) svg { fill: var(--muted); }
+.nav-item:not(.active) span { color: var(--muted); }
+
+/* REFRESH ANIMATION */
+@keyframes balanceFlash {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); color: var(--green); }
+  100% { transform: scale(1); }
+}
+.balance-flash { animation: balanceFlash .5s ease forwards; }
+
+/* TOAST */
+#toast {
+  position: absolute; top: 70px; left: 50%; transform: translateX(-50%) translateY(-10px);
+  background: rgba(80,216,144,.15); border: 1px solid rgba(80,216,144,.3);
+  color: var(--green); font-size: 12px; font-weight: 600;
+  padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+  opacity: 0; transition: all .3s; z-index: 200;
+  backdrop-filter: blur(10px);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* GRADIENT HEADER BG */
+.header-gradient {
+  position: absolute; top: 0; left: 0; right: 0; height: 320px;
+  background: radial-gradient(ellipse at 50% -20%, rgba(124,92,191,.35) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="phone">
+  <div class="header-gradient"></div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <div class="status-time" id="clock">9:41</div>
+    <div style="width:120px;height:30px;background:#0d0d1a;border-radius:20px;margin:0 auto;"></div>
+    <div class="status-icons">
+      <!-- Signal -->
+      <svg viewBox="0 0 24 24"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity=".3"/></svg>
+      <!-- WiFi -->
+      <svg viewBox="0 0 24 24"><path d="M1 7c5.5-5.3 16.5-5.3 22 0M5 11c3.9-3.7 10.1-3.7 14 0M9 15c1.9-1.8 5.1-1.8 7 0M12 19h.01" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      <!-- Battery -->
+      <svg viewBox="0 0 24 24"><rect x="1" y="7" width="18" height="10" rx="2" stroke="#fff" stroke-width="1.5" fill="none"/><rect x="3" y="9" width="13" height="6" rx="1" fill="#fff"/><path d="M20 10.5v3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast">✓ Баланс обновлён</div>
+
+  <!-- SCROLLABLE CONTENT -->
+  <div id="ptr-container">
+    <!-- PTR INDICATOR -->
+    <div id="ptr-indicator">
+      <div id="ptr-spinner"></div>
+      <span id="ptr-text">Потяните для обновления</span>
+    </div>
+
+    <div id="scroll-content" style="position:relative;z-index:1;">
+      <!-- TOP NAV -->
+      <div id="topnav">
+        <div class="wallet-selector">
+          <div class="wallet-avatar"></div>
+          <div class="wallet-name">Wallet 1</div>
+          <div class="wallet-chevron">▾</div>
+        </div>
+        <button class="nav-icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+      </div>
+
+      <!-- BALANCE -->
+      <div id="balance-section">
+        <div class="balance-label">Total Balance</div>
+        <div id="total-balance">$148.00</div>
+        <div id="balance-change">
+          <span>↑</span>
+          <span id="change-text">+$2.36 (1.62%)</span>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div id="actions">
+        <div class="action-btn">
+          <div class="action-icon">↑</div>
+          <div class="action-label">Отправить</div>
+        </div>
+        <div class="action-btn">
+          <div class="action-icon">↓</div>
+          <div class="action-label">Получить</div>
+        </div>
+        <div class="action-btn">
+          <div class="action-icon">⇄</div>
+          <div class="action-label">Обмен</div>
+        </div>
+        <div class="action-btn">
+          <div class="action-icon">⋯</div>
+          <div class="action-label">Ещё</div>
+        </div>
+      </div>
+
+      <!-- TOKENS -->
+      <div class="section-header">
+        <div class="section-title">Токены</div>
+        <div class="section-link">Управление</div>
+      </div>
+
+      <div id="token-list">
+        <!-- SOL -->
+        <div class="token-item">
+          <div class="token-logo" style="background:#000;overflow:hidden;">
+            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+          </div>
+          <div class="token-info">
+            <div class="token-name">Solana</div>
+            <div class="token-amount" id="sol-amount">2 SOL</div>
+          </div>
+          <div class="token-value">
+            <div class="token-usd" id="sol-usd">$148.00</div>
+            <div class="token-change up">+1.62%</div>
+          </div>
+        </div>
+
+        <!-- USDC -->
+        <div class="token-item">
+          <div class="token-logo" style="background:#fff;overflow:hidden;">
+            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+          </div>
+          <div class="token-info">
+            <div class="token-name">USD Coin</div>
+            <div class="token-amount" id="usdc-amount">0 USDC</div>
+          </div>
+          <div class="token-value">
+            <div class="token-usd" id="usdc-usd">$0.00</div>
+            <div class="token-change up">+0.01%</div>
+          </div>
+        </div>
+
+        <!-- BONK -->
+        <div class="token-item">
+          <div class="token-logo" style="background:#fff;overflow:hidden;">
+            <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+          </div>
+          <div class="token-info">
+            <div class="token-name">Bonk</div>
+            <div class="token-amount" id="bonk-amount">0 BONK</div>
+          </div>
+          <div class="token-value">
+            <div class="token-usd" id="bonk-usd">$0.00</div>
+            <div class="token-change dn">-3.21%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NFT SECTION -->
+      <div class="section-header" style="margin-top:16px;">
+        <div class="section-title">NFT</div>
+        <div class="section-link">Все</div>
+      </div>
+
+      <div id="nft-section">
+        <div class="nft-scroll">
+          <div class="nft-card">
+            <div class="nft-img" style="background:linear-gradient(135deg,#1a1a3e,#2d1b69);">🧙</div>
+            <div class="nft-info">
+              <div class="nft-name">Wizard #4821</div>
+              <div class="nft-floor">Floor: 1.2 SOL</div>
+            </div>
+          </div>
+          <div class="nft-card">
+            <div class="nft-img" style="background:linear-gradient(135deg,#0d2137,#1a4a6e);">🦊</div>
+            <div class="nft-info">
+              <div class="nft-name">Fox #0392</div>
+              <div class="nft-floor">Floor: 0.8 SOL</div>
+            </div>
+          </div>
+          <div class="nft-card">
+            <div class="nft-img" style="background:linear-gradient(135deg,#1a0d2e,#4a1a6e);">🐉</div>
+            <div class="nft-info">
+              <div class="nft-name">Dragon #1107</div>
+              <div class="nft-floor">Floor: 2.5 SOL</div>
+            </div>
+          </div>
+          <div class="nft-card">
+            <div class="nft-img" style="background:linear-gradient(135deg,#0d1f0d,#1a4a1a);">🤖</div>
+            <div class="nft-info">
+              <div class="nft-name">Bot #7743</div>
+              <div class="nft-floor">Floor: 0.4 SOL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /scroll-content -->
+  </div><!-- /ptr-container -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+      <span>Главная</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9h.01M15 9h.01M8 13s1.5 2 4 2 4-2 4-2"/></svg>
+      <span>Активность</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      <span>Браузер</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+      <span>Профиль</span>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+// Clock
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=
+    now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+}
+updateClock();
+setInterval(updateClock,10000);
+
+// ── PULL TO REFRESH ──────────────────────────────────
+const container = document.getElementById('ptr-container');
+const indicator = document.getElementById('ptr-indicator');
+const spinner   = document.getElementById('ptr-spinner');
+const ptrText   = document.getElementById('ptr-text');
+
+let startY = 0, pulling = false, refreshed = false;
+const THRESHOLD = 80;
+
+// State
+let isRich = false;
+let pullCount = 0; // counts pulls toward reveal
+
+container.addEventListener('touchstart', e=>{
+  if(container.scrollTop === 0){
+    startY = e.touches[0].clientY;
+    pulling = true;
+    refreshed = false;
+  }
+},{passive:true});
+
+container.addEventListener('touchmove', e=>{
+  if(!pulling) return;
+  const dy = e.touches[0].clientY - startY;
+  if(dy > 0 && container.scrollTop === 0){
+    const pull = Math.min(dy, 120);
+    indicator.style.marginTop = (pull - 60) + 'px';
+    const pct = pull / THRESHOLD;
+    spinner.style.transform = `rotate(${pct * 360}deg)`;
+    if(pull >= THRESHOLD){
+      ptrText.textContent = 'Отпустите для обновления';
+      spinner.style.borderTopColor = '#50d890';
+    } else {
+      ptrText.textContent = 'Потяните для обновления';
+      spinner.style.borderTopColor = '#ab9ff2';
+    }
+  }
+},{passive:true});
+
+container.addEventListener('touchend', e=>{
+  if(!pulling) return;
+  pulling = false;
+  const dy = e.changedTouches[0].clientY - startY;
+  if(dy >= THRESHOLD && !refreshed){
+    doRefresh();
+  } else {
+    indicator.style.marginTop = '-60px';
+  }
+});
+
+// Mouse support for desktop testing
+let mouseStart = 0, mousePulling = false;
+container.addEventListener('mousedown', e=>{
+  if(container.scrollTop===0){ mouseStart=e.clientY; mousePulling=true; }
+});
+document.addEventListener('mousemove', e=>{
+  if(!mousePulling) return;
+  const dy = e.clientY - mouseStart;
+  if(dy>0){
+    const pull=Math.min(dy,120);
+    indicator.style.marginTop=(pull-60)+'px';
+    spinner.style.transform=`rotate(${(pull/THRESHOLD)*360}deg)`;
+    if(pull>=THRESHOLD){ ptrText.textContent='Отпустите для обновления'; spinner.style.borderTopColor='#50d890'; }
+    else { ptrText.textContent='Потяните для обновления'; spinner.style.borderTopColor='#ab9ff2'; }
+  }
+});
+document.addEventListener('mouseup', e=>{
+  if(!mousePulling) return;
+  mousePulling=false;
+  const dy=e.clientY-mouseStart;
+  if(dy>=THRESHOLD){ doRefresh(); }
+  else { indicator.style.marginTop='-60px'; }
+});
+
+function doRefresh(){
+  refreshed = true;
+  spinner.classList.add('spinning');
+
+  if(!isRich){
+    pullCount++;
+    const left = 3 - pullCount;
+    if(pullCount < 3){
+      ptrText.textContent = 'Обновление...';
+      setTimeout(()=>{
+        spinner.classList.remove('spinning');
+        indicator.style.marginTop = '-60px';
+        ptrText.textContent = 'Потяните для обновления';
+        spinner.style.transform = '';
+      }, 900);
+      return;
+    }
+  }
+
+  // 3rd pull or switching back
+  ptrText.textContent = 'Обновление...';
+  setTimeout(()=>{
+    isRich = !isRich;
+    if(!isRich) pullCount = 0; // reset counter when going back to normal
+    updateBalance();
+    spinner.classList.remove('spinning');
+    indicator.style.marginTop = '-60px';
+    ptrText.textContent = 'Потяните для обновления';
+    spinner.style.transform = '';
+    showToast(isRich ? '💰 Баланс обновлён!' : 'Баланс обновлён');
+  }, 1200);
+}
+
+function updateBalance(){
+  const balEl  = document.getElementById('total-balance');
+  const chgEl  = document.getElementById('balance-change');
+  const chgTxt = document.getElementById('change-text');
+  const solAmt = document.getElementById('sol-amount');
+  const solUsd = document.getElementById('sol-usd');
+
+  balEl.classList.remove('balance-flash');
+  void balEl.offsetWidth; // reflow
+
+  if(isRich){
+    // 15000 SOL worth — ~202 SOL at $74
+    balEl.textContent = '$15,438.45';
+    balEl.classList.add('balance-flash');
+    chgTxt.textContent = '+$15,290.45 (+10,331%)';
+    chgEl.style.color = '#50d890';
+    chgEl.querySelector('span').textContent = '↑';
+    solAmt.textContent = '208.6 SOL';
+    solUsd.textContent = '$15,432.18';
+    document.getElementById('usdc-amount').textContent = '3.21 USDC';
+    document.getElementById('usdc-usd').textContent = '$3.21';
+    document.getElementById('bonk-amount').textContent = '148,500 BONK';
+    document.getElementById('bonk-usd').textContent = '$3.06';
+  } else {
+    balEl.textContent = '$148.00';
+    balEl.classList.add('balance-flash');
+    chgTxt.textContent = '+$2.36 (1.62%)';
+    chgEl.style.color = '#50d890';
+    chgEl.querySelector('span').textContent = '↑';
+    solAmt.textContent = '2 SOL';
+    solUsd.textContent = '$148.00';
+    document.getElementById('usdc-amount').textContent = '0 USDC';
+    document.getElementById('usdc-usd').textContent = '$0.00';
+    document.getElementById('bonk-amount').textContent = '0 BONK';
+    document.getElementById('bonk-usd').textContent = '$0.00';
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// Slight price fluctuation every 5s
+setInterval(()=>{
+  const base = isRich ? 74 : 74;
+  const price = (base + (Math.random()-.5)*2).toFixed(2);
+  if(!isRich){
+    const total = (2 * parseFloat(price)).toFixed(2);
+    document.getElementById('sol-usd').textContent = '$'+total;
+    document.getElementById('total-balance').textContent = '$'+total;
+  }
+},5000);
+</script>
+</body>
+</html>
